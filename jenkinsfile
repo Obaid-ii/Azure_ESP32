@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Define the PlatformIO executable path if it's not in the system PATH
+        PLATFORMIO_PATH = 'C:/Users/Muhammad Adeel/.platformio/penv/Scripts/platformio.exe'
+        PROJECT_DIR = 'D:/FYP/Azure_ESP32'
+        Docker_DIR = 'C:/Program Files/Docker/Docker/resources/bin'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Obaid-ii/Azure_ESP32']])
+            }
+        }
+        stage('Build') {
+            steps {
+                // Run the PlatformIO build command in the project directory
+                dir(PROJECT_DIR) {
+                    // Run the PlatformIO build command
+                    bat "\"${PLATFORMIO_PATH}\" run --environment esp32doit-devkit-v1"
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                dir(PROJECT_DIR) {
+                    // Build Docker image
+                    bat "\"${Docker_DIR}/docker\" build -t obaidullah123/fyp ."
+                }
+            }
+        }
+        stage('Push Docker image to Docker Hub') {
+    steps {
+        script {
+            // Specify the path to the Docker executable
+            def dockerCmd = '"C:/Program Files/Docker/Docker/resources/bin/docker"'
+
+            // Retrieve Docker Hub password from Jenkins credentials
+            withCredentials([string(credentialsId: 'DockerID', variable: 'dockerhubpwd')])  {
+                // Login to Docker Hub
+                bat "${dockerCmd} login -u obaidullah123 -p \"${dockerhubpwd}\""
+            }
+                            // Push Docker image to Docker Hub
+                bat "${dockerCmd} push obaidullah123/fyp"
+        }
+    }
+}
+
+}
+
+}
